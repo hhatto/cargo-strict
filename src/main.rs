@@ -113,8 +113,9 @@ fn check(filename: &str) -> Vec<StrictResult> {
 }
 
 fn main() {
-    let args = env::args();
-    if args.len() == 1 {
+    let args = env::args().skip(2);
+
+    if args.len() == 0 {
         for entry in WalkDir::new("./") {
             let entry = entry.expect("$2");
             if !entry.file_type().is_file() {
@@ -130,7 +131,6 @@ fn main() {
             }
         }
     } else {
-        let args = args.skip(1);
         for arg in args {
             let results = check(arg.as_str());
             for result in results {
