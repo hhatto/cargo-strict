@@ -127,7 +127,7 @@ fn exec_fix(result: &StrictResult) {
     let filename = &result.filename;
     let input = File::open(filename).expect("fail open file");
     let output_filename = format!("{}.strictfix", filename);
-    let output = File::create(output_filename).expect("fail create file");
+    let output = File::create(output_filename.as_str()).expect("fail create file");
     let mut buf = BufReader::new(input);
     let mut wbuf = BufWriter::new(output);
     let mut line = String::new();
@@ -146,6 +146,11 @@ fn exec_fix(result: &StrictResult) {
         }
         line.clear();
         lineno += 1;
+    }
+
+    match std::fs::rename(output_filename.as_str(), filename) {
+        Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
+        _ => {},
     }
 }
 
