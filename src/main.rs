@@ -1,11 +1,14 @@
 extern crate memchr;
 extern crate walkdir;
+extern crate crypto;
 
 use std::env;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
 use walkdir::WalkDir;
+use crypto::digest::Digest;
+use crypto::md5::Md5;
 
 struct StrictResult {
     filename: String,
@@ -22,6 +25,13 @@ impl StrictResult {
             col: col,
             line: line.to_string(),
         }
+    }
+
+    fn gen_md5hash(self) -> String {
+        let mut md5 = Md5::new();
+        let key = format!("{}_{}_{}_{}", self.filename, self.lineno, self.col, self.line);
+        md5.input(key.as_bytes());
+        md5.result_str().to_string()
     }
 }
 
