@@ -40,6 +40,17 @@ $ cargo strict example/simple.rs
 ### as formatter (WIP)
 ```
 $ cargo strict --fix
-./examples/simple.rs:2:24:     let _ = s.find("wo").expect("error-id1");
-./src/main.rs:96:36:     let input = File::open(filename).expect("error-id2");
+$ git diff
+diff --git a/examples/simple.rs b/examples/simple.rs
+index e066898..dbe188b 100644
+--- a/examples/simple.rs
++++ b/examples/simple.rs
+@@ -1,6 +1,6 @@
+ fn main() {
+     let s = "Hello world";  /* .unwrap() */
+-    let _ = s.find("wo").unwrap();
++    let _ = s.find("wo").expect("error-id:5cb0410ba34b040dbbde09dc1991685d");
+     // let _ = s.find("wo").unwrap();
+     let ignore = "s.unwrap();";
+ }
 ```
