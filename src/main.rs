@@ -4,7 +4,7 @@ extern crate crypto;
 
 use std::env;
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 use std::fs::File;
 use walkdir::WalkDir;
 use crypto::digest::Digest;
@@ -17,6 +17,8 @@ struct StrictResult {
     line: String,
 }
 
+const UNWRAP_METHOD: &str = ".unwrap()";
+
 impl StrictResult {
     fn new(filename: &str, lineno: usize, col: usize, line: &str) -> Self {
         Self {
@@ -27,7 +29,7 @@ impl StrictResult {
         }
     }
 
-    fn gen_md5hash(self) -> String {
+    fn gen_md5hash(&self) -> String {
         let mut md5 = Md5::new();
         let key = format!("{}_{}_{}_{}", self.filename, self.lineno, self.col, self.line);
         md5.input(key.as_bytes());
@@ -89,9 +91,9 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
 }
 
 fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResult> {
-    match line.find(".unwrap()") {
+    match line.find(UNWRAP_METHOD) {
         Some(col) => {
-            if is_comment_or_string(col, col+".unwrap()".len()-1, line) {
+            if is_comment_or_string(col, col+UNWRAP_METHOD.len()-1, line) {
                 None
             } else {
                 Some(StrictResult::new(filename, lineno, col, line))
@@ -101,7 +103,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
     }
 }
 
-fn check(filename: &str) -> Vec<StrictResult> {
+fn exec_check(filename: &str) -> Vec<StrictResult> {
     let mut results = vec![];
     let input = File::open(filename).expect("fail open file");
     let mut buf = BufReader::new(input);
@@ -121,10 +123,47 @@ fn check(filename: &str) -> Vec<StrictResult> {
     results
 }
 
-fn main() {
-    let args = env::args().skip(2);
+fn exec_fix(result: &StrictResult) {
+    let filename = &result.filename;
+    let input = File::open(filename).expect("fail open file");
+    let output_filename = format!("{}.strictfix", filename);
+    let output = File::create(output_filename).expect("fail create file");
+    let mut buf = BufReader::new(input);
+    let mut wbuf = BufWriter::new(output);
+    let mut line = String::new();
+    let mut lineno: usize = 0;
+    loop {
+        if buf.read_line(&mut line).expect("read_line() error") <= 0 {
+            break;
+        }
+        if lineno == (&result).lineno {
+            let md5 = result.gen_md5hash();
+            let ex = format!(".expect(\"error-id:{}\")", md5);
+            let new_line = line.replace(UNWRAP_METHOD, ex.as_str());
+            let _ = wbuf.write(new_line.as_bytes());
+        } else {
+            let _ = wbuf.write(line.as_bytes());
+        }
+        line.clear();
+        lineno += 1;
+    }
+}
 
+fn main() {
+    // check fix mode
+    let mut is_fix_mode = false;
+    for arg in env::args() {
+        if arg.as_str() == "--fix" {
+            is_fix_mode = true;
+        }
+    }
+
+    let args = env::args().skip(2);
+    let mut args = args.filter(|x| x.as_str() != "--fix").collect::<Vec<String>>();
+
+    // walk directory and collect filepath when non args.
     if args.len() == 0 {
+        args = vec![];
         for entry in WalkDir::new("./") {
             let entry = entry.expect("$2");
             if !entry.file_type().is_file() {
@@ -134,15 +173,16 @@ fn main() {
             if !filepath.ends_with(".rs") {
                 continue;
             }
-            let results = check(filepath);
-            for result in results {
-                println!("{}:{}:{}: {}", result.filename, result.lineno, result.col, result.line);
-            }
+            args.push(filepath.to_string());
         }
-    } else {
-        for arg in args {
-            let results = check(arg.as_str());
-            for result in results {
+    }
+
+    for arg in args {
+        let results = exec_check(arg.as_str());
+        for result in results {
+            if is_fix_mode {
+                exec_fix(&result);
+            } else {
                 println!("{}:{}:{}: {}", result.filename, result.lineno, result.col, result.line);
             }
         }
