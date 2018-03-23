@@ -139,7 +139,7 @@ fn exec_fix(result: &StrictResult) {
         if lineno == (&result).lineno {
             let md5 = result.gen_md5hash();
             let ex = format!(".expect(\"error-id:{}\")", md5);
-            let new_line = line.replace(UNWRAP_METHOD, ex.as_str());
+            let new_line = line.replacen(UNWRAP_METHOD, ex.as_str(), 1);
             let _ = wbuf.write(new_line.as_bytes());
         } else {
             let _ = wbuf.write(line.as_bytes());
