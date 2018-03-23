@@ -37,7 +37,7 @@ $ cargo strict example/simple.rs
 ./examples/simple.rs:2:24:     let _ = s.find("wo").unwrap();
 ```
 
-### as formatter (WIP)
+### as formatter
 ```diff
 $ cargo strict --fix
 $ git diff
