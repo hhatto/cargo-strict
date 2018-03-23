@@ -93,8 +93,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
 
 fn check(filename: &str) -> Vec<StrictResult> {
     let mut results = vec![];
-    //let input = File::open(filename).expect("fail open file");
-    let input = File::open(filename).unwrap();
+    let input = File::open(filename).expect("fail open file");
     let mut buf = BufReader::new(input);
     let mut line = String::new();
     let mut lineno: usize = 0;
