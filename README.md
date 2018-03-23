@@ -15,7 +15,7 @@ $ cargo strict
 ```
 
 input:
-```
+```rust
 $ cat examples/simple.rs
 fn main() {
     let s = "Hello world";  /* .unwrap() */
@@ -38,7 +38,7 @@ $ cargo strict example/simple.rs
 ```
 
 ### as formatter (WIP)
-```
+```diff
 $ cargo strict --fix
 $ git diff
 diff --git a/examples/simple.rs b/examples/simple.rs
