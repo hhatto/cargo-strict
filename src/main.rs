@@ -1,3 +1,4 @@
+extern crate difflib;
 extern crate memchr;
 extern crate walkdir;
 extern crate crypto;
@@ -5,7 +6,7 @@ extern crate crypto;
 use std::env;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
-use std::fs::File;
+use std::fs::{metadata, File};
 use walkdir::WalkDir;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -105,7 +106,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
 
 fn exec_check(filename: &str) -> Vec<StrictResult> {
     let mut results = vec![];
-    let input = File::open(filename).expect("fail open file");
+    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
     let mut buf = BufReader::new(input);
     let mut line = String::new();
     let mut lineno: usize = 0;
@@ -123,48 +124,98 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
     results
 }
 
-fn exec_fix(result: &StrictResult) {
-    let filename = &result.filename;
-    let input = File::open(filename).expect("fail open file");
-    let output_filename = format!("{}.strictfix", filename);
-    let output = File::create(output_filename.as_str()).expect("fail create file");
-    let mut buf = BufReader::new(input);
-    let mut wbuf = BufWriter::new(output);
+fn file2vecstr(filename: &str) -> Vec<String> {
+    let mut f = BufReader::new(File::open(filename).expect("file open error"));
     let mut line = String::new();
-    let mut lineno: usize = 0;
+    let mut strs = vec![];
     loop {
-        if buf.read_line(&mut line).expect("read_line() error") <= 0 {
+        if f.read_line(&mut line).expect("fail read line") <= 0 {
             break;
         }
-        if lineno == (&result).lineno {
-            let md5 = result.gen_md5hash();
-            let ex = format!(".expect(\"error-id:{}\")", md5);
-            let new_line = line.replacen(UNWRAP_METHOD, ex.as_str(), 1);
-            let _ = wbuf.write(new_line.as_bytes());
-        } else {
-            let _ = wbuf.write(line.as_bytes());
-        }
+        strs.push(line.clone());
         line.clear();
-        lineno += 1;
+    }
+    return strs
+}
+
+fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
+    let filename = &result.filename;
+    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
+    let output_filename = format!("{}.strictfix", filename);
+    let output = File::create(output_filename.as_str()).expect("fail create file");
+    {
+        let mut buf = BufReader::new(input);
+        let mut wbuf = BufWriter::new(output);
+        let mut line = String::new();
+        let mut lineno: usize = 0;
+        loop {
+            if buf.read_line(&mut line).expect("read_line() error") <= 0 {
+                break;
+            }
+            if lineno == (&result).lineno {
+                let md5 = result.gen_md5hash();
+                let ex = format!(".expect(\"error-id:{}\")", md5);
+                let new_line = line.replacen(UNWRAP_METHOD, ex.as_str(), 1);
+                let _ = wbuf.write(new_line.as_bytes());
+            } else {
+                let _ = wbuf.write(line.as_bytes());
+            }
+            line.clear();
+            lineno += 1;
+        }
     }
 
-    match std::fs::rename(output_filename.as_str(), filename) {
-        Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
-        _ => {},
+    if is_diff_mode {
+        // print diff
+        let org = file2vecstr(filename);
+        let orgmeta = metadata(filename).expect("get orgfile metadata error");
+        let fix = file2vecstr(output_filename.as_str());
+        let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
+        let orgtime = format!("{:?}", orgmeta.modified().unwrap());
+        let fixtime = format!("{:?}", fixmeta.modified().unwrap());
+        let diff = difflib::unified_diff(
+            &org, &fix, filename, output_filename.as_str(), orgtime.as_str(), fixtime.as_str(), 3);
+        for l in &diff {
+            print!("{}", l);
+        }
+
+        // remove tmp file
+        match std::fs::remove_file(output_filename.as_str()) {
+            Err(e) => println!("remove file error: {:?}", e),
+            _ => {},
+        }
+    } else {
+        match std::fs::rename(output_filename.as_str(), filename) {
+            Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
+            _ => {},
+        }
     }
 }
 
 fn main() {
     // check fix mode
     let mut is_fix_mode = false;
+    let mut is_diff_mode = false;
     for arg in env::args() {
         if arg.as_str() == "--fix" {
             is_fix_mode = true;
         }
+        if arg.as_str() == "--diff" {
+            is_diff_mode = true;
+        }
+        if arg.as_str() == "-h" || arg.as_str() == "--help" {
+            println!("usage: cargo strict [--fix|--diff] [FILE]");
+            std::process::exit(0);
+        }
+    }
+
+    if is_diff_mode && is_fix_mode {
+        println!("usage: cargo strict [--fix|--diff] [FILE]");
+        std::process::exit(-1);
     }
 
     let args = env::args().skip(2);
-    let mut args = args.filter(|x| x.as_str() != "--fix").collect::<Vec<String>>();
+    let mut args = args.filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff").collect::<Vec<String>>();
 
     // walk directory and collect filepath when non args.
     if args.len() == 0 {
@@ -185,8 +236,8 @@ fn main() {
     for arg in args {
         let results = exec_check(arg.as_str());
         for result in results {
-            if is_fix_mode {
-                exec_fix(&result);
+            if is_fix_mode || is_diff_mode {
+                exec_fix_or_diff(&result, is_diff_mode);
             } else {
                 println!("{}:{}:{}: {}", result.filename, result.lineno, result.col, result.line);
             }

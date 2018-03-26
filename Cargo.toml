@@ -7,3 +7,4 @@ authors = ["Hideo Hattori <hhatto.jp@gmail.com>"]
 walkdir = "2"
 memchr = "2.0"
 rust-crypto = "0.2"
+difflib = "0.3"
