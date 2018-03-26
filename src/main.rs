@@ -1,7 +1,7 @@
+extern crate crypto;
 extern crate difflib;
 extern crate memchr;
 extern crate walkdir;
-extern crate crypto;
 
 use std::env;
 use std::io::prelude::*;
@@ -32,7 +32,10 @@ impl StrictResult {
 
     fn gen_md5hash(&self) -> String {
         let mut md5 = Md5::new();
-        let key = format!("{}_{}_{}_{}", self.filename, self.lineno, self.col, self.line);
+        let key = format!(
+            "{}_{}_{}_{}",
+            self.filename, self.lineno, self.col, self.line
+        );
         md5.input(key.as_bytes());
         md5.result_str().to_string()
     }
@@ -42,19 +45,19 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
     // check in comment
     match memchr::memchr2('/' as u8, '/' as u8, line.as_bytes()) {
         Some(i) => {
-            if (target_col+1) > i {
+            if (target_col + 1) > i {
                 return true;
             }
-        },
-        None => {},
+        }
+        None => {}
     }
     match memchr::memchr2('/' as u8, '*' as u8, line.as_bytes()) {
         Some(i) => {
-            if (target_col+1) > i {
+            if (target_col + 1) > i {
                 return true;
             }
-        },
-        None => {},
+        }
+        None => {}
     }
 
     // check in string
@@ -70,12 +73,12 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
                 if start {
                     start = false;
                 } else {
-                    string_set.push((start_col, offset+v));
+                    string_set.push((start_col, offset + v));
                     start = true
                 }
                 start_col += v;
                 offset += v + 1;
-            },
+            }
             None => break,
         }
         if offset >= line_length {
@@ -94,12 +97,12 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
 fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResult> {
     match line.find(UNWRAP_METHOD) {
         Some(col) => {
-            if is_comment_or_string(col, col+UNWRAP_METHOD.len()-1, line) {
+            if is_comment_or_string(col, col + UNWRAP_METHOD.len() - 1, line) {
                 None
             } else {
                 Some(StrictResult::new(filename, lineno, col, line))
             }
-        },
+        }
         None => None,
     }
 }
@@ -116,7 +119,7 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
         }
         match check_strict(filename, lineno, line.trim_right()) {
             Some(v) => results.push(v),
-            None => {},
+            None => {}
         }
         line.clear();
         lineno += 1;
@@ -135,7 +138,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
         strs.push(line.clone());
         line.clear();
     }
-    return strs
+    return strs;
 }
 
 fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
@@ -174,7 +177,14 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         let orgtime = format!("{:?}", orgmeta.modified().unwrap());
         let fixtime = format!("{:?}", fixmeta.modified().unwrap());
         let diff = difflib::unified_diff(
-            &org, &fix, filename, output_filename.as_str(), orgtime.as_str(), fixtime.as_str(), 3);
+            &org,
+            &fix,
+            filename,
+            output_filename.as_str(),
+            orgtime.as_str(),
+            fixtime.as_str(),
+            3,
+        );
         for l in &diff {
             print!("{}", l);
         }
@@ -182,12 +192,12 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         // remove tmp file
         match std::fs::remove_file(output_filename.as_str()) {
             Err(e) => println!("remove file error: {:?}", e),
-            _ => {},
+            _ => {}
         }
     } else {
         match std::fs::rename(output_filename.as_str(), filename) {
             Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
-            _ => {},
+            _ => {}
         }
     }
 }
@@ -215,7 +225,8 @@ fn main() {
     }
 
     let args = env::args().skip(2);
-    let mut args = args.filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff").collect::<Vec<String>>();
+    let mut args = args.filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff")
+        .collect::<Vec<String>>();
 
     // walk directory and collect filepath when non args.
     if args.len() == 0 {
@@ -239,7 +250,10 @@ fn main() {
             if is_fix_mode || is_diff_mode {
                 exec_fix_or_diff(&result, is_diff_mode);
             } else {
-                println!("{}:{}:{}: {}", result.filename, result.lineno, result.col, result.line);
+                println!(
+                    "{}:{}:{}: {}",
+                    result.filename, result.lineno, result.col, result.line
+                );
             }
         }
     }
