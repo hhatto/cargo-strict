@@ -34,10 +34,11 @@ impl StrictResult {
 
     fn gen_md5hash(&self) -> String {
         let mut md5 = Md5::new();
-        let key = format!(
-            "{}_{}_{}_{}",
-            self.filename, self.lineno, self.col, self.line
-        );
+        let key = format!("{}_{}_{}_{}",
+                          self.filename,
+                          self.lineno,
+                          self.col,
+                          self.line);
         md5.input(key.as_bytes());
         md5.result_str().to_string()
     }
@@ -175,25 +176,25 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         let org = file2vecstr(filename);
         let orgtime = {
             let orgmeta = metadata(filename).expect("get orgfile metadata error");
-            let v: DateTime<Local> = DateTime::from(orgmeta.modified().expect("get original file modified time error"));
+            let v: DateTime<Local> = DateTime::from(orgmeta.modified()
+                .expect("get original file modified time error"));
             v.to_rfc2822()
         };
 
         let fix = file2vecstr(output_filename.as_str());
         let fixtime = {
             let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
-            let v: DateTime<Local> = DateTime::from(fixmeta.modified().expect("get fixed file modified time error"));
+            let v: DateTime<Local> = DateTime::from(fixmeta.modified()
+                .expect("get fixed file modified time error"));
             v.to_rfc2822()
         };
-        let diff = difflib::unified_diff(
-            &org,
-            &fix,
-            filename,
-            output_filename.as_str(),
-            orgtime.as_str(),
-            fixtime.as_str(),
-            3,
-        );
+        let diff = difflib::unified_diff(&org,
+                                         &fix,
+                                         filename,
+                                         output_filename.as_str(),
+                                         orgtime.as_str(),
+                                         fixtime.as_str(),
+                                         3);
         for l in &diff {
             print!("{}", l);
         }
@@ -259,10 +260,11 @@ fn main() {
             if is_fix_mode || is_diff_mode {
                 exec_fix_or_diff(&result, is_diff_mode);
             } else {
-                println!(
-                    "{}:{}:{}: {}",
-                    result.filename, result.lineno, result.col, result.line
-                );
+                println!("{}:{}:{}: {}",
+                         result.filename,
+                         result.lineno,
+                         result.col,
+                         result.line);
             }
         }
     }
