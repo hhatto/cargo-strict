@@ -2,6 +2,7 @@ extern crate crypto;
 extern crate difflib;
 extern crate memchr;
 extern crate walkdir;
+extern crate chrono;
 
 use std::env;
 use std::io::prelude::*;
@@ -10,6 +11,7 @@ use std::fs::{metadata, File};
 use walkdir::WalkDir;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
+use chrono::prelude::*;
 
 struct StrictResult {
     filename: String,
@@ -171,11 +173,18 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
     if is_diff_mode {
         // print diff
         let org = file2vecstr(filename);
-        let orgmeta = metadata(filename).expect("get orgfile metadata error");
+        let orgtime = {
+            let orgmeta = metadata(filename).expect("get orgfile metadata error");
+            let v: DateTime<Local> = DateTime::from(orgmeta.modified().expect("get original file modified time error"));
+            v.to_rfc2822()
+        };
+
         let fix = file2vecstr(output_filename.as_str());
-        let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
-        let orgtime = format!("{:?}", orgmeta.modified().unwrap());
-        let fixtime = format!("{:?}", fixmeta.modified().unwrap());
+        let fixtime = {
+            let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
+            let v: DateTime<Local> = DateTime::from(fixmeta.modified().expect("get fixed file modified time error"));
+            v.to_rfc2822()
+        };
         let diff = difflib::unified_diff(
             &org,
             &fix,
