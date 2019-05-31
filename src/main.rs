@@ -120,7 +120,7 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
         if buf.read_line(&mut line).expect("read_line() error") <= 0 {
             break;
         }
-        match check_strict(filename, lineno, line.trim_right()) {
+        match check_strict(filename, lineno, line.trim_end()) {
             Some(v) => results.push(v),
             None => {}
         }
