@@ -2,6 +2,7 @@
 name = "cargo-strict"
 version = "0.1.0"
 authors = ["Hideo Hattori <hhatto.jp@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 walkdir = "2"

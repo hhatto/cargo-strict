@@ -1,9 +1,3 @@
-extern crate crypto;
-extern crate difflib;
-extern crate memchr;
-extern crate walkdir;
-extern crate chrono;
-
 use std::env;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
