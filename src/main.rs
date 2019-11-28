@@ -20,8 +20,8 @@ impl StrictResult {
     fn new(filename: &str, lineno: usize, col: usize, line: &str) -> Self {
         Self {
             filename: filename.to_string(),
-            lineno: lineno,
-            col: col,
+            lineno,
+            col,
             line: line.to_string(),
         }
     }
@@ -40,7 +40,7 @@ impl StrictResult {
 
 fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) -> bool {
     // check in comment
-    match memchr::memchr2('/' as u8, '/' as u8, line.as_bytes()) {
+    match memchr::memchr2(b'/', b'/', line.as_bytes()) {
         Some(i) => {
             if (target_col + 1) > i {
                 return true;
@@ -48,7 +48,7 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
         }
         None => {}
     }
-    match memchr::memchr2('/' as u8, '*' as u8, line.as_bytes()) {
+    match memchr::memchr2(b'/', b'*', line.as_bytes()) {
         Some(i) => {
             if (target_col + 1) > i {
                 return true;
@@ -65,7 +65,7 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
     let mut string_set: Vec<(usize, usize)> = vec![];
     let bline = line.as_bytes();
     loop {
-        match memchr::memchr('"' as u8, &(bline[offset..])) {
+        match memchr::memchr(b'"', &(bline[offset..])) {
             Some(v) => {
                 if start {
                     start = false;
@@ -135,7 +135,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
         strs.push(line.clone());
         line.clear();
     }
-    return strs;
+    strs
 }
 
 fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
@@ -152,7 +152,7 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
             if buf.read_line(&mut line).expect("read_line() error") <= 0 {
                 break;
             }
-            if lineno == (&result).lineno {
+            if lineno == (result).lineno {
                 let md5 = result.gen_md5hash();
                 let ex = format!(".expect(\"error-id:{}\")", md5);
                 let new_line = line.replacen(UNWRAP_METHOD, ex.as_str(), 1);
@@ -233,7 +233,7 @@ fn main() {
         .collect::<Vec<String>>();
 
     // walk directory and collect filepath when non args.
-    if args.len() == 0 {
+    if args.is_empty() {
         args = vec![];
         for entry in WalkDir::new("./") {
             let entry = entry.expect("$2");
