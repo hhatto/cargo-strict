@@ -97,7 +97,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
             if is_comment_or_string(col, col + UNWRAP_METHOD.len() - 1, line) {
                 None
             } else {
-                Some(StrictResult::new(filename, lineno, col, line))
+                Some(StrictResult::new(filename, lineno + 1, col, line))
             }
         }
         None => None,
