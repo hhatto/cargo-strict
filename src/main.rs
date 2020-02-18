@@ -34,7 +34,7 @@ impl StrictResult {
                           self.col,
                           self.line);
         md5.input(key.as_bytes());
-        md5.result_str().to_string()
+        md5.result_str()
     }
 }
 
@@ -111,8 +111,13 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
     let mut line = String::new();
     let mut lineno: usize = 0;
     loop {
-        if buf.read_line(&mut line).expect("read_line() error") <= 0 {
-            break;
+        match buf.read_line(&mut line) {
+            Ok(n) => {
+                if n == 0 {
+                    break;
+                }
+            },
+            Err(e) => panic!("read_line() error: {}", e),
         }
         match check_strict(filename, lineno, line.trim_end()) {
             Some(v) => results.push(v),
@@ -129,8 +134,13 @@ fn file2vecstr(filename: &str) -> Vec<String> {
     let mut line = String::new();
     let mut strs = vec![];
     loop {
-        if f.read_line(&mut line).expect("fail read line") <= 0 {
-            break;
+        match f.read_line(&mut line) {
+            Ok(n) => {
+                if n == 0 {
+                    break;
+                }
+            },
+            Err(e) => panic!("read_line() error: {}", e),
         }
         strs.push(line.clone());
         line.clear();
@@ -149,8 +159,13 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         let mut line = String::new();
         let mut lineno: usize = 0;
         loop {
-            if buf.read_line(&mut line).expect("read_line() error") <= 0 {
-                break;
+            match buf.read_line(&mut line) {
+                Ok(n) => {
+                    if n == 0 {
+                        break;
+                    }
+                },
+                Err(e) => panic!("read_line() error: {}", e),
             }
             if lineno == (result).lineno {
                 let md5 = result.gen_md5hash();
