@@ -25,7 +25,7 @@ fn main() {
 }
 ```
 
-### as linter
+### Usage as linter
 ```
 $ cargo strict
 ./examples/simple.rs:2:24:     let _ = s.find("wo").unwrap();
@@ -37,7 +37,7 @@ $ cargo strict example/simple.rs
 ./examples/simple.rs:2:24:     let _ = s.find("wo").unwrap();
 ```
 
-### as formatter
+### Usage as formatter
 ```diff
 $ cargo strict --fix
 $ git diff
