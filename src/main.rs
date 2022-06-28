@@ -3,8 +3,7 @@ use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fs::{metadata, File};
 use walkdir::WalkDir;
-use crypto::digest::Digest;
-use crypto::md5::Md5;
+use md5;
 use chrono::prelude::*;
 
 struct StrictResult {
@@ -26,15 +25,13 @@ impl StrictResult {
         }
     }
 
-    fn gen_md5hash(&self) -> String {
-        let mut md5 = Md5::new();
+    fn gen_md5hash(&self) -> md5::Digest {
         let key = format!("{}_{}_{}_{}",
                           self.filename,
                           self.lineno,
                           self.col,
                           self.line);
-        md5.input(key.as_bytes());
-        md5.result_str()
+        md5::compute(key.as_bytes())
     }
 }
 
@@ -169,7 +166,7 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
             }
             if lineno == (result).lineno {
                 let md5 = result.gen_md5hash();
-                let ex = format!(".expect(\"error-id:{}\")", md5);
+                let ex = format!(".expect(\"error-id:{:x}\")", md5);
                 let new_line = line.replacen(UNWRAP_METHOD, ex.as_str(), 1);
                 let _ = wbuf.write(new_line.as_bytes());
             } else {

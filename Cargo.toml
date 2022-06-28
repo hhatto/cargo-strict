@@ -2,11 +2,11 @@
 name = "cargo-strict"
 version = "0.1.0"
 authors = ["Hideo Hattori <hhatto.jp@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 walkdir = "2"
 memchr = "2.0"
-rust-crypto = "0.2.36"
+md5 = "0.7"
 difflib = "0.4"
 chrono = "0.4.19"
