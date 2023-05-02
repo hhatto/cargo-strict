@@ -9,4 +9,4 @@ walkdir = "2"
 memchr = "2.0"
 md5 = "0.7"
 difflib = "0.4"
-chrono = "0.4.20-beta.1"
+chrono = { git = "https://github.com/chronotope/chrono", rev = "1a0d47a3e58eeb44e2b5022547262650d1a7a436" }
