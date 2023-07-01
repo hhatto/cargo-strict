@@ -1,4 +1,4 @@
-# cargo-strict
+# cargo-strict [![build](https://github.com/hhatto/cargo-strict/actions/workflows/rust.yml/badge.svg)](https://github.com/hhatto/cargo-strict/actions/workflows/rust.yml)
 
 check `unwrap` strict code.
 
