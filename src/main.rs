@@ -112,7 +112,7 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
 }
 
 fn file2vecstr(filename: &str) -> Vec<String> {
-    let mut f = BufReader::new(File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename)));
+    let mut f = BufReader::new(File::open(filename).expect("file open error"));
     let mut line = String::new();
     let mut strs = vec![];
     loop {
@@ -132,7 +132,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
 
 fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
     let filename = &result.filename;
-    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
+    let input = File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename));
     let output_filename = format!("{}.strictfix", filename);
     let output = File::create(output_filename.as_str()).expect("fail create file");
     {
