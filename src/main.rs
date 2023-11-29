@@ -91,7 +91,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
 
 fn exec_check(filename: &str) -> Vec<StrictResult> {
     let mut results = vec![];
-    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
+    let input = File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename));
     let mut buf = BufReader::new(input);
     let mut line = String::new();
     let mut lineno: usize = 0;
@@ -112,7 +112,7 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
 }
 
 fn file2vecstr(filename: &str) -> Vec<String> {
-    let mut f = BufReader::new(File::open(filename).expect("file open error"));
+    let mut f = BufReader::new(File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename)));
     let mut line = String::new();
     let mut strs = vec![];
     loop {
