@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fs::{metadata, File};
 use walkdir::WalkDir;
-use md5;
 use chrono::prelude::*;
 
 struct StrictResult {
@@ -37,21 +36,15 @@ impl StrictResult {
 
 fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) -> bool {
     // check in comment
-    match memchr::memchr2(b'/', b'/', line.as_bytes()) {
-        Some(i) => {
-            if (target_col + 1) > i {
-                return true;
-            }
+    if let Some(i) = memchr::memchr2(b'/', b'/', line.as_bytes()) {
+        if (target_col + 1) > i {
+            return true;
         }
-        None => {}
     }
-    match memchr::memchr2(b'/', b'*', line.as_bytes()) {
-        Some(i) => {
-            if (target_col + 1) > i {
-                return true;
-            }
+    if let Some(i) = memchr::memchr2(b'/', b'*', line.as_bytes()) {
+        if (target_col + 1) > i {
+            return true;
         }
-        None => {}
     }
 
     // check in string
@@ -61,20 +54,15 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
     let mut start_col = 0;
     let mut string_set: Vec<(usize, usize)> = vec![];
     let bline = line.as_bytes();
-    loop {
-        match memchr::memchr(b'"', &(bline[offset..])) {
-            Some(v) => {
-                if start {
-                    start = false;
-                } else {
-                    string_set.push((start_col, offset + v));
-                    start = true
-                }
-                start_col += v;
-                offset += v + 1;
-            }
-            None => break,
+    while let Some(v) = memchr::memchr(b'"', &(bline[offset..])) {
+        if start {
+            start = false;
+        } else {
+            string_set.push((start_col, offset + v));
+            start = true
         }
+        start_col += v;
+        offset += v + 1;
         if offset >= line_length {
             break;
         }
@@ -116,10 +104,7 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
             },
             Err(e) => panic!("read_line() error: {}", e),
         }
-        match check_strict(filename, lineno, line.trim_end()) {
-            Some(v) => results.push(v),
-            None => {}
-        }
+        if let Some(v) = check_strict(filename, lineno, line.trim_end()) { results.push(v) }
         line.clear();
         lineno += 1;
     }
@@ -206,15 +191,11 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         }
 
         // remove tmp file
-        match std::fs::remove_file(output_filename.as_str()) {
-            Err(e) => println!("remove file error: {:?}", e),
-            _ => {}
+        if let Err(e) = std::fs::remove_file(output_filename.as_str()) {
+            println!("remove file error: {:?}", e)
         }
-    } else {
-        match std::fs::rename(output_filename.as_str(), filename) {
-            Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
-            _ => {}
-        }
+    } else if let Err(e) = std::fs::rename(output_filename.as_str(), filename) {
+        println!("rename error: {:?}, {} to {}", e, output_filename, filename)
     }
 }
 
