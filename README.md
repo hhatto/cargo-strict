@@ -2,7 +2,7 @@
 
 check `unwrap` strict code.
 
-## Instllation
+## Installation
 
 ```
 $ cargo install --git https://github.com/hhatto/cargo-strict.git
