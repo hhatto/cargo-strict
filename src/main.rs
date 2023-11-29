@@ -1,10 +1,9 @@
+use chrono::prelude::*;
 use std::env;
+use std::fs::{metadata, File};
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
-use std::fs::{metadata, File};
 use walkdir::WalkDir;
-use md5;
-use chrono::prelude::*;
 
 struct StrictResult {
     filename: String,
@@ -26,32 +25,25 @@ impl StrictResult {
     }
 
     fn gen_md5hash(&self) -> md5::Digest {
-        let key = format!("{}_{}_{}_{}",
-                          self.filename,
-                          self.lineno,
-                          self.col,
-                          self.line);
+        let key = format!(
+            "{}_{}_{}_{}",
+            self.filename, self.lineno, self.col, self.line
+        );
         md5::compute(key.as_bytes())
     }
 }
 
 fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) -> bool {
     // check in comment
-    match memchr::memchr2(b'/', b'/', line.as_bytes()) {
-        Some(i) => {
-            if (target_col + 1) > i {
-                return true;
-            }
+    if let Some(i) = memchr::memchr2(b'/', b'/', line.as_bytes()) {
+        if (target_col + 1) > i {
+            return true;
         }
-        None => {}
     }
-    match memchr::memchr2(b'/', b'*', line.as_bytes()) {
-        Some(i) => {
-            if (target_col + 1) > i {
-                return true;
-            }
+    if let Some(i) = memchr::memchr2(b'/', b'*', line.as_bytes()) {
+        if (target_col + 1) > i {
+            return true;
         }
-        None => {}
     }
 
     // check in string
@@ -61,20 +53,15 @@ fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) ->
     let mut start_col = 0;
     let mut string_set: Vec<(usize, usize)> = vec![];
     let bline = line.as_bytes();
-    loop {
-        match memchr::memchr(b'"', &(bline[offset..])) {
-            Some(v) => {
-                if start {
-                    start = false;
-                } else {
-                    string_set.push((start_col, offset + v));
-                    start = true
-                }
-                start_col += v;
-                offset += v + 1;
-            }
-            None => break,
+    while let Some(v) = memchr::memchr(b'"', &(bline[offset..])) {
+        if start {
+            start = false;
+        } else {
+            string_set.push((start_col, offset + v));
+            start = true
         }
+        start_col += v;
+        offset += v + 1;
         if offset >= line_length {
             break;
         }
@@ -103,7 +90,7 @@ fn check_strict(filename: &str, lineno: usize, line: &str) -> Option<StrictResul
 
 fn exec_check(filename: &str) -> Vec<StrictResult> {
     let mut results = vec![];
-    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
+    let input = File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename));
     let mut buf = BufReader::new(input);
     let mut line = String::new();
     let mut lineno: usize = 0;
@@ -113,12 +100,11 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
                 if n == 0 {
                     break;
                 }
-            },
+            }
             Err(e) => panic!("read_line() error: {}", e),
         }
-        match check_strict(filename, lineno, line.trim_end()) {
-            Some(v) => results.push(v),
-            None => {}
+        if let Some(v) = check_strict(filename, lineno, line.trim_end()) {
+            results.push(v)
         }
         line.clear();
         lineno += 1;
@@ -136,7 +122,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
                 if n == 0 {
                     break;
                 }
-            },
+            }
             Err(e) => panic!("read_line() error: {}", e),
         }
         strs.push(line.clone());
@@ -147,7 +133,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
 
 fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
     let filename = &result.filename;
-    let input = File::open(filename).expect(format!("fail open file={}", filename).as_str());
+    let input = File::open(filename).unwrap_or_else(|_| panic!("fail open file={}", filename));
     let output_filename = format!("{}.strictfix", filename);
     let output = File::create(output_filename.as_str()).expect("fail create file");
     {
@@ -161,7 +147,7 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
                     if n == 0 {
                         break;
                     }
-                },
+                }
                 Err(e) => panic!("read_line() error: {}", e),
             }
             if lineno == (result).lineno {
@@ -182,39 +168,43 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         let org = file2vecstr(filename);
         let orgtime = {
             let orgmeta = metadata(filename).expect("get orgfile metadata error");
-            let v: DateTime<Local> = DateTime::from(orgmeta.modified()
-                .expect("get original file modified time error"));
+            let v: DateTime<Local> = DateTime::from(
+                orgmeta
+                    .modified()
+                    .expect("get original file modified time error"),
+            );
             v.to_rfc2822()
         };
 
         let fix = file2vecstr(output_filename.as_str());
         let fixtime = {
             let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
-            let v: DateTime<Local> = DateTime::from(fixmeta.modified()
-                .expect("get fixed file modified time error"));
+            let v: DateTime<Local> = DateTime::from(
+                fixmeta
+                    .modified()
+                    .expect("get fixed file modified time error"),
+            );
             v.to_rfc2822()
         };
-        let diff = difflib::unified_diff(&org,
-                                         &fix,
-                                         filename,
-                                         output_filename.as_str(),
-                                         orgtime.as_str(),
-                                         fixtime.as_str(),
-                                         3);
+        let diff = difflib::unified_diff(
+            &org,
+            &fix,
+            filename,
+            output_filename.as_str(),
+            orgtime.as_str(),
+            fixtime.as_str(),
+            3,
+        );
         for l in &diff {
             print!("{}", l);
         }
 
         // remove tmp file
-        match std::fs::remove_file(output_filename.as_str()) {
-            Err(e) => println!("remove file error: {:?}", e),
-            _ => {}
+        if let Err(e) = std::fs::remove_file(output_filename.as_str()) {
+            println!("remove file error: {:?}", e)
         }
-    } else {
-        match std::fs::rename(output_filename.as_str(), filename) {
-            Err(e) => println!("rename error: {:?}, {} to {}", e, output_filename, filename),
-            _ => {}
-        }
+    } else if let Err(e) = std::fs::rename(output_filename.as_str(), filename) {
+        println!("rename error: {:?}, {} to {}", e, output_filename, filename)
     }
 }
 
@@ -241,7 +231,8 @@ fn main() {
     }
 
     let args = env::args().skip(2);
-    let mut args = args.filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff")
+    let mut args = args
+        .filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff")
         .collect::<Vec<String>>();
 
     // walk directory and collect filepath when non args.
@@ -266,11 +257,10 @@ fn main() {
             if is_fix_mode || is_diff_mode {
                 exec_fix_or_diff(&result, is_diff_mode);
             } else {
-                println!("{}:{}:{}: {}",
-                         result.filename,
-                         result.lineno,
-                         result.col,
-                         result.line);
+                println!(
+                    "{}:{}:{}: {}",
+                    result.filename, result.lineno, result.col, result.line
+                );
             }
         }
     }
