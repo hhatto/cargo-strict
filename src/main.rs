@@ -1,9 +1,9 @@
+use chrono::prelude::*;
 use std::env;
+use std::fs::{metadata, File};
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
-use std::fs::{metadata, File};
 use walkdir::WalkDir;
-use chrono::prelude::*;
 
 struct StrictResult {
     filename: String,
@@ -25,11 +25,10 @@ impl StrictResult {
     }
 
     fn gen_md5hash(&self) -> md5::Digest {
-        let key = format!("{}_{}_{}_{}",
-                          self.filename,
-                          self.lineno,
-                          self.col,
-                          self.line);
+        let key = format!(
+            "{}_{}_{}_{}",
+            self.filename, self.lineno, self.col, self.line
+        );
         md5::compute(key.as_bytes())
     }
 }
@@ -101,10 +100,12 @@ fn exec_check(filename: &str) -> Vec<StrictResult> {
                 if n == 0 {
                     break;
                 }
-            },
+            }
             Err(e) => panic!("read_line() error: {}", e),
         }
-        if let Some(v) = check_strict(filename, lineno, line.trim_end()) { results.push(v) }
+        if let Some(v) = check_strict(filename, lineno, line.trim_end()) {
+            results.push(v)
+        }
         line.clear();
         lineno += 1;
     }
@@ -121,7 +122,7 @@ fn file2vecstr(filename: &str) -> Vec<String> {
                 if n == 0 {
                     break;
                 }
-            },
+            }
             Err(e) => panic!("read_line() error: {}", e),
         }
         strs.push(line.clone());
@@ -146,7 +147,7 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
                     if n == 0 {
                         break;
                     }
-                },
+                }
                 Err(e) => panic!("read_line() error: {}", e),
             }
             if lineno == (result).lineno {
@@ -167,25 +168,33 @@ fn exec_fix_or_diff(result: &StrictResult, is_diff_mode: bool) {
         let org = file2vecstr(filename);
         let orgtime = {
             let orgmeta = metadata(filename).expect("get orgfile metadata error");
-            let v: DateTime<Local> = DateTime::from(orgmeta.modified()
-                .expect("get original file modified time error"));
+            let v: DateTime<Local> = DateTime::from(
+                orgmeta
+                    .modified()
+                    .expect("get original file modified time error"),
+            );
             v.to_rfc2822()
         };
 
         let fix = file2vecstr(output_filename.as_str());
         let fixtime = {
             let fixmeta = metadata(output_filename.as_str()).expect("get fixfile metadata error");
-            let v: DateTime<Local> = DateTime::from(fixmeta.modified()
-                .expect("get fixed file modified time error"));
+            let v: DateTime<Local> = DateTime::from(
+                fixmeta
+                    .modified()
+                    .expect("get fixed file modified time error"),
+            );
             v.to_rfc2822()
         };
-        let diff = difflib::unified_diff(&org,
-                                         &fix,
-                                         filename,
-                                         output_filename.as_str(),
-                                         orgtime.as_str(),
-                                         fixtime.as_str(),
-                                         3);
+        let diff = difflib::unified_diff(
+            &org,
+            &fix,
+            filename,
+            output_filename.as_str(),
+            orgtime.as_str(),
+            fixtime.as_str(),
+            3,
+        );
         for l in &diff {
             print!("{}", l);
         }
@@ -222,7 +231,8 @@ fn main() {
     }
 
     let args = env::args().skip(2);
-    let mut args = args.filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff")
+    let mut args = args
+        .filter(|x| x.as_str() != "--fix" && x.as_str() != "--diff")
         .collect::<Vec<String>>();
 
     // walk directory and collect filepath when non args.
@@ -247,11 +257,10 @@ fn main() {
             if is_fix_mode || is_diff_mode {
                 exec_fix_or_diff(&result, is_diff_mode);
             } else {
-                println!("{}:{}:{}: {}",
-                         result.filename,
-                         result.lineno,
-                         result.col,
-                         result.line);
+                println!(
+                    "{}:{}:{}: {}",
+                    result.filename, result.lineno, result.col, result.line
+                );
             }
         }
     }
