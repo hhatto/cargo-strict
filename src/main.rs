@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use std::env;
-use std::fs::{metadata, File};
+use std::fs::{File, metadata};
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use walkdir::WalkDir;
@@ -35,15 +35,15 @@ impl StrictResult {
 
 fn is_comment_or_string(target_col: usize, target_col_end: usize, line: &str) -> bool {
     // check in comment
-    if let Some(i) = memchr::memchr2(b'/', b'/', line.as_bytes()) {
-        if (target_col + 1) > i {
-            return true;
-        }
+    if let Some(i) = memchr::memchr2(b'/', b'/', line.as_bytes())
+        && (target_col + 1) > i
+    {
+        return true;
     }
-    if let Some(i) = memchr::memchr2(b'/', b'*', line.as_bytes()) {
-        if (target_col + 1) > i {
-            return true;
-        }
+    if let Some(i) = memchr::memchr2(b'/', b'*', line.as_bytes())
+        && (target_col + 1) > i
+    {
+        return true;
     }
 
     // check in string
